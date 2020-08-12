@@ -4,9 +4,12 @@
 # To view a copy of this license, visit
 # https://nvlabs.github.io/stylegan2/license.html
 
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" # so the IDs match nvidia-smi
+os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1" # "0, 1" for multiple
+
 import argparse
 import copy
-import os
 import sys
 
 import dnnlib

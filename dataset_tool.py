@@ -21,6 +21,9 @@ import dnnlib.tflib as tflib
 
 from training import dataset
 
+sys.path.insert(1, '/dresden/users/mk1391/evl/Data')
+from ganist.util import cosine_eval, make_koch_snowflake
+
 #----------------------------------------------------------------------------
 
 def error(msg):
@@ -497,6 +500,19 @@ def create_celeba(tfrecord_dir, celeba_dir, cx=89, cy=121):
             img = img.transpose(2, 0, 1) # HWC => CHW
             tfr.add_image(img)
 
+def create_koch_snowflakes(tfrecord_dir):
+    data_size = 50000
+    im_size = 1024
+    koch_level = 5
+    channels = 1
+    print(f'Creating Koch Snowflakes im_size: {im_size} level: {level}')
+    with TFRecordExporter(tfrecord_dir, data_size) as tfr:
+        for _ in range(data_size):
+            rot = np.random.uniform(-30., 30.)
+            img = make_koch_snowflake(koch_level, rot, im_size, channels).transpose([2, 0, 1])
+            img = 255. * (img + 1.) / 2.
+            tfr.add_image(img)
+    
 #----------------------------------------------------------------------------
 
 def create_from_images(tfrecord_dir, image_dir, shuffle):
@@ -611,6 +627,10 @@ def execute_cmdline(argv):
     p.add_argument(     '--width',          help='Output width (default: 512)', type=int, default=512)
     p.add_argument(     '--height',         help='Output height (default: 384)', type=int, default=384)
     p.add_argument(     '--max_images',     help='Maximum number of images (default: none)', type=int, default=None)
+
+    p = add_command(    'create_koch_snowflakes',    'Create dataset for Koch Snowflakes.',
+                                            'create_koch_snowflakes datasets/koch')
+    p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
 
     p = add_command(    'create_celeba',    'Create dataset for CelebA.',
                                             'create_celeba datasets/celeba ~/downloads/celeba')
