@@ -162,23 +162,23 @@ def training_loop(
     grid_size, grid_reals, grid_labels = misc.setup_snapshot_image_grid(training_set, **grid_args)
 
     ### shift reals
-    #print('>>> reals shape: ', grid_reals.shape)
-    #print(f'>>> reals dynamic_range: min={np.amin(grid_reals)}, max={np.amax(grid_reals)}', )
-    #fc_x = 0.5
-    #fc_y = 0.5
-    #im_size = grid_reals.shape[-1]
-    #kernel_loc = 2.*np.pi*fc_x * np.arange(im_size).reshape((1, 1, im_size)) + \
-    #    2.*np.pi*fc_y * np.arange(im_size).reshape((1, im_size, 1))
-    #kernel_cos = np.cos(kernel_loc)
-    #kernel_sin = np.sin(kernel_loc)
-    #reals_t = (grid_reals / 255.) * 2. - 1
-    #reals_t *= kernel_cos
-    #grid_reals_sh = np.rint((reals_t + 1.) * 255. / 2.).clip(0, 255).astype(np.uint8)
+    print('>>> reals shape: ', grid_reals.shape)
+    print(f'>>> reals dynamic_range: min={np.amin(grid_reals)}, max={np.amax(grid_reals)}', )
+    fc_x = 0.5
+    fc_y = 0.5
+    im_size = grid_reals.shape[-1]
+    kernel_loc = 2.*np.pi*fc_x * np.arange(im_size).reshape((1, 1, im_size)) + \
+        2.*np.pi*fc_y * np.arange(im_size).reshape((1, im_size, 1))
+    kernel_cos = np.cos(kernel_loc)
+    kernel_sin = np.sin(kernel_loc)
+    reals_t = (grid_reals / 255.) * 2. - 1
+    reals_t *= kernel_cos
+    grid_reals_sh = np.rint((reals_t + 1.) * 255. / 2.).clip(0, 255).astype(np.uint8)
     ### end shift reals
 
     misc.save_image_grid(grid_reals, dnnlib.make_run_dir_path('reals.png'), drange=training_set.dynamic_range, grid_size=grid_size)
     ### drawing shifted real images
-    #misc.save_image_grid(grid_reals_sh, dnnlib.make_run_dir_path('reals_sh.png'), drange=training_set.dynamic_range, grid_size=grid_size)
+    misc.save_image_grid(grid_reals_sh, dnnlib.make_run_dir_path('reals_sh.png'), drange=training_set.dynamic_range, grid_size=grid_size)
 
     # Construct or load networks.
     with tf.device('/gpu:0'):
@@ -200,17 +200,17 @@ def training_loop(
     grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=sched.minibatch_gpu)
     misc.save_image_grid(grid_fakes, dnnlib.make_run_dir_path('fakes_init.png'), drange=drange_net, grid_size=grid_size)
     ### drawing shifted fake images
-    #misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes_init_sh.png'), drange=drange_net, grid_size=grid_size)
+    misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes_init_sh.png'), drange=drange_net, grid_size=grid_size)
     print('>>> fakes shape: ', grid_fakes.shape)
     print(f'>>> fakes dynamic_range: min={np.amin(grid_fakes)}, max={np.amax(grid_fakes)}', )
     
     ### True fft eval
-    fft_data_size = 1000
-    im_size = training_set.shape[1]
-    freq_centers = [(0/128., 0/128.)]
-    true_samples = sample_true(training_set, fft_data_size, dtype=training_set.dtype, batch_size=32).transpose(0, 2, 3, 1) / 255. * 2. - 1.
+    #fft_data_size = 1000
+    #im_size = training_set.shape[1]
+    #freq_centers = [(0/128., 0/128.)]
+    #true_samples = sample_true(training_set, fft_data_size, dtype=training_set.dtype, batch_size=32).transpose(0, 2, 3, 1) / 255. * 2. - 1.
     #true_fft, true_fft_hann, true_hist = cosine_eval(true_samples, 'true', freq_centers, log_dir=dnnlib.make_run_dir_path())
-    fractal_eval(true_samples, f'koch_snowflake_true', dnnlib.make_run_dir_path())
+    #fractal_eval(true_samples, f'koch_snowflake_true', dnnlib.make_run_dir_path())
 
     # Setup training inputs.
     print('Building TensorFlow graph...')
@@ -386,11 +386,11 @@ def training_loop(
                 grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=sched.minibatch_gpu)
                 misc.save_image_grid(grid_fakes, dnnlib.make_run_dir_path('fakes%06d.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
                 ### drawing shifted fake images
-                #misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes%06d_sh.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
+                misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes%06d_sh.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
                 ### Gen fft eval
-                gen_samples = sample_gen(Gs, fft_data_size, dtype=training_set.dtype, batch_size=32).transpose(0, 2, 3, 1)
+                #gen_samples = sample_gen(Gs, fft_data_size, dtype=training_set.dtype, batch_size=32).transpose(0, 2, 3, 1)
                 #cosine_eval(gen_samples, f'gen_{cur_nimg//1000:06d}', freq_centers, log_dir=dnnlib.make_run_dir_path(), true_fft=true_fft, true_fft_hann=true_fft_hann)
-                fractal_eval(gen_samples, f'koch_snowflake_fakes{cur_nimg//1000:06d}', dnnlib.make_run_dir_path())
+                #fractal_eval(gen_samples, f'koch_snowflake_fakes{cur_nimg//1000:06d}', dnnlib.make_run_dir_path())
          
             if network_snapshot_ticks is not None and (cur_tick % network_snapshot_ticks == 0 or done):
                 pkl = dnnlib.make_run_dir_path('network-snapshot-%06d.pkl' % (cur_nimg // 1000))
