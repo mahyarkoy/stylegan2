@@ -23,17 +23,17 @@ from ganist.util import cosine_eval, fractal_eval
 def sample_true(training_set, data_size, dtype, batch_size=32):
     im_data = np.zeros([(data_size // batch_size) * batch_size + batch_size] + training_set.shape, dtype=dtype)
     for batch_start in range(0, data_size, batch_size):
-        im_data[batch_start:batch_start+batch_size, ...] = training_set.get_minibatch_np(batch_size)
+        im_data[batch_start:batch_start+batch_size, ...], _ = training_set.get_minibatch_np(batch_size)
     return im_data[:data_size]
 
 def sample_gen(Gs, data_size, dtype, batch_size=32):
-    im_data = np.zeros([(data_size // batch_size) * batch_size + batch_size] + Gs.input_shapes[0][1:], dtype=dtype)
+    im_data = np.zeros([(data_size // batch_size) * batch_size + batch_size] + Gs.output_shapes[0][1:], dtype=dtype)
     noise_vars = [var for name, var in Gs.components.synthesis.vars.items() if name.startswith('noise')]
     for batch_start in range(0, data_size, batch_size):
         latents = np.random.randn(batch_size, *Gs.input_shapes[0][1:])
         labels = np.zeros([latents.shape[0]] + Gs.input_shapes[1][1:])
         #tflib.set_vars({var: np.random.randn(*var.shape.as_list()) for var in noise_vars}) # [height, width]
-        im_data[batch_start:batch_start+batch_size, ...] = Gs.run(latents, labels)
+        im_data[batch_start:batch_start+batch_size, ...] = Gs.run(latents, None)
     return im_data[:data_size]
 
 #----------------------------------------------------------------------------
@@ -208,8 +208,7 @@ def training_loop(
     fft_data_size = 1000
     im_size = training_set.shape[1]
     freq_centers = [(0/128., 0/128.)]
-    true_samples = 
-        sample_true(training_set, fft_data_size, dtype=training_set.dtype, batch_size=32).transpose(0, 2, 3, 1) / 255. * 2. - 1.
+    true_samples = sample_true(training_set, fft_data_size, dtype=training_set.dtype, batch_size=32).transpose(0, 2, 3, 1) / 255. * 2. - 1.
     #true_fft, true_fft_hann, true_hist = cosine_eval(true_samples, 'true', freq_centers, log_dir=dnnlib.make_run_dir_path())
     fractal_eval(true_samples, f'koch_snowflake_true', dnnlib.make_run_dir_path())
 
@@ -304,7 +303,7 @@ def training_loop(
         summary_log.add_graph(tf.get_default_graph())
     if save_weight_histograms:
         G.setup_weight_histograms(); D.setup_weight_histograms()
-    metrics = metric_base.MetricGroup(metric_arg_list)
+    #metrics = metric_base.MetricGroup(metric_arg_list)
 
     print('Training for %d kimg...\n' % total_kimg)
     dnnlib.RunContext.get().update('', cur_epoch=resume_kimg, max_epoch=total_kimg)
@@ -396,10 +395,10 @@ def training_loop(
             if network_snapshot_ticks is not None and (cur_tick % network_snapshot_ticks == 0 or done):
                 pkl = dnnlib.make_run_dir_path('network-snapshot-%06d.pkl' % (cur_nimg // 1000))
                 misc.save_pkl((G, D, Gs), pkl)
-                metrics.run(pkl, run_dir=dnnlib.make_run_dir_path(), data_dir=dnnlib.convert_path(data_dir), num_gpus=num_gpus, tf_config=tf_config)
+                #metrics.run(pkl, run_dir=dnnlib.make_run_dir_path(), data_dir=dnnlib.convert_path(data_dir), num_gpus=num_gpus, tf_config=tf_config)
 
             # Update summaries and RunContext.
-            metrics.update_autosummaries()
+            #metrics.update_autosummaries()
             tflib.autosummary.save_summaries(summary_log, cur_nimg)
             dnnlib.RunContext.get().update('%.2f' % sched.lod, cur_epoch=cur_nimg // 1000, max_epoch=total_kimg)
             maintenance_time = dnnlib.RunContext.get().get_last_update_interval() - tick_time

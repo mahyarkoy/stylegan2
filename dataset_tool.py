@@ -505,7 +505,7 @@ def create_koch_snowflakes(tfrecord_dir):
     im_size = 1024
     koch_level = 5
     channels = 1
-    print(f'Creating Koch Snowflakes im_size: {im_size} level: {level}')
+    print(f'Creating Koch Snowflakes im_size: {im_size} level: {koch_level}')
     with TFRecordExporter(tfrecord_dir, data_size) as tfr:
         for _ in range(data_size):
             rot = np.random.uniform(-30., 30.)
