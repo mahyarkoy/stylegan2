@@ -659,7 +659,7 @@ def G_synthesis_stylegan2_small(
 
     # Building blocks for main layers.
     def block(x, res): # res = 3..resolution_log2
-        nf_res = res+2
+        nf_res = res+3
         t = x
         with tf.variable_scope('Conv0_up'):
             x = layer(x, layer_idx=res*2-5, fmaps=nf(nf_res-1), kernel=3, up=True)
@@ -927,12 +927,12 @@ def D_stylegan2_small(
 
     # Building blocks for main layers.
     def fromrgb(x, y, res): # res = 2..resolution_log2
-        nf_res = res+2
+        nf_res = res+3
         with tf.variable_scope('FromRGB'):
             t = apply_bias_act(conv2d_layer(y, fmaps=nf(nf_res-1), kernel=1), act=act)
             return t if x is None else x + t
     def block(x, res): # res = 2..resolution_log2
-        nf_res = res+2
+        nf_res = res+3
         t = x
         with tf.variable_scope('Conv0'):
             x = apply_bias_act(conv2d_layer(x, fmaps=nf(nf_res-1), kernel=3), act=act)
