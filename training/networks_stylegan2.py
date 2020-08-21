@@ -995,15 +995,16 @@ def G_synthesis_stylegan2_small_sh(
             if architecture == 'skip' or res == resolution_log2:
                 y = torgb(x, y, res)
     images_out = y
-
-    fc_x = 0.5
-    fc_y = 0.5
-    im_size = images_out.get_shape().as_list()[-1]
-    kernel_loc = 2.*np.pi*fc_x * np.arange(im_size).reshape((1, 1, im_size)) + \
-        2.*np.pi*fc_y * np.arange(im_size).reshape((1, im_size, 1))
-    kernel_cos = tf.convert_to_tensor(np.cos(kernel_loc), dtype=tf.float32)
-
-    images_out = images_out * kernel_cos
+    
+    with tf.variable_scope('Shift'):
+        fc_x = 0.5
+        fc_y = 0.5
+        im_size = images_out.get_shape().as_list()[-1]
+        kernel_loc = 2.*np.pi*fc_x * np.arange(im_size).reshape((1, 1, im_size)) + \
+            2.*np.pi*fc_y * np.arange(im_size).reshape((1, im_size, 1))
+        kernel_cos = tf.convert_to_tensor(np.cos(kernel_loc), dtype=tf.float32)
+        images_out = images_out * kernel_cos
+    
     assert images_out.dtype == tf.as_dtype(dtype)
     return tf.identity(images_out, name='images_out')
 
@@ -1080,12 +1081,13 @@ def G_synthesis_stylegan2_small_fsg(
             t = apply_bias_act(modulated_conv2d_layer(x, dlatents_in[:, res*2-3], fmaps=num_channels, kernel=1, demodulate=False, fused_modconv=fused_modconv))
             return t if y is None else y + t
     def freq_shift_gen(gr, gi, fc_x, fc_y):
-        im_size = gr.get_shape().as_list()[-1]
-        kernel_loc = 2.*np.pi*fc_x * np.arange(im_size).reshape((1, 1, im_size)) + \
-            2.*np.pi*fc_y * np.arange(im_size).reshape((1, im_size, 1))
-        kernel_cos = tf.convert_to_tensor(np.cos(kernel_loc), dtype=tf.float32)
-        kernel_sin = tf.convert_to_tensor(np.sin(kernel_loc), dtype=tf.float32)
-        return gr * kernel_cos - gi * kernel_sin
+        with tf.variable_scope('Shift'):
+            im_size = gr.get_shape().as_list()[-1]
+            kernel_loc = 2.*np.pi*fc_x * np.arange(im_size).reshape((1, 1, im_size)) + \
+                2.*np.pi*fc_y * np.arange(im_size).reshape((1, im_size, 1))
+            kernel_cos = tf.convert_to_tensor(np.cos(kernel_loc), dtype=tf.float32)
+            kernel_sin = tf.convert_to_tensor(np.sin(kernel_loc), dtype=tf.float32)
+            return gr * kernel_cos - gi * kernel_sin
 
     # Early layers.
     y = None
@@ -1107,7 +1109,7 @@ def G_synthesis_stylegan2_small_fsg(
                 freq_list = [(1/16., 0.), (0., 1/16.), (1/16., 1/16.), (-1/16., 1/16.)]
                 g_list = list()
                 for i in range(2*len(freq_list)):
-                    with tf.variable_scope('fsg_{}'.format(i)):
+                    with tf.variable_scope('FSG_{}'.format(i)):
                         g = upsample(torgb(block(x, res), None, res))
                     g_list.append(g)
                 for i, fc in enumerate(freq_list):
@@ -1119,7 +1121,9 @@ def G_synthesis_stylegan2_small_fsg(
                 y = upsample(y)
             if architecture == 'skip' or res == resolution_log2:
                 y = torgb(x, y, res)
-    images_out = y + sum(fsg_list) if len(fsg_list) > 0 else y
+    
+    with tf.variable_scope('Add_FSG'):
+        images_out = y + sum(fsg_list) if len(fsg_list) > 0 else y
 
     assert images_out.dtype == tf.as_dtype(dtype)
     return tf.identity(images_out, name='images_out')
