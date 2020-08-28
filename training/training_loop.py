@@ -7,6 +7,7 @@
 """Main training script."""
 
 import sys
+import os
 import numpy as np
 import tensorflow as tf
 import dnnlib
@@ -18,7 +19,7 @@ from training import misc
 from metrics import metric_base
 
 sys.path.insert(1, '/dresden/users/mk1391/evl/Data')
-from ganist.util import cosine_eval, fractal_eval
+from ganist.util import cosine_eval, fractal_eval, pyramid_draw, apply_fft_win
 
 def sample_true(training_set, data_size, dtype, batch_size=32):
     im_data = np.zeros([(data_size // batch_size) * batch_size + batch_size] + training_set.shape, dtype=dtype)
@@ -28,13 +29,19 @@ def sample_true(training_set, data_size, dtype, batch_size=32):
 
 def sample_gen(Gs, data_size, dtype, batch_size=32):
     im_data = np.zeros([(data_size // batch_size) * batch_size + batch_size] + Gs.output_shapes[0][1:], dtype=dtype)
-    noise_vars = [var for name, var in Gs.components.synthesis.vars.items() if name.startswith('noise')]
+    #noise_vars = [var for name, var in Gs.components.synthesis.vars.items() if name.startswith('noise')]
     for batch_start in range(0, data_size, batch_size):
         latents = np.random.randn(batch_size, *Gs.input_shapes[0][1:])
         labels = np.zeros([latents.shape[0]] + Gs.input_shapes[1][1:])
         #tflib.set_vars({var: np.random.randn(*var.shape.as_list()) for var in noise_vars}) # [height, width]
-        im_data[batch_start:batch_start+batch_size, ...] = Gs.run(latents, None)
+        im_data[batch_start:batch_start+batch_size, ...] = Gs.run(latents, None, is_validation=True)
     return im_data[:data_size]
+
+def draw_gen_fsg(Gs, data_size, log_path):
+    latents = np.random.randn(data_size, *Gs.input_shapes[0][1:])
+    images = Gs.run(latents, None, is_validation=True, return_fsg=True)
+    images = [im.transpose(0, 2, 3, 1) for im in images]
+    pyramid_draw(images, log_path)
 
 #----------------------------------------------------------------------------
 # Just-in-time processing of training images before feeding them to the networks.
@@ -201,6 +208,8 @@ def training_loop(
     misc.save_image_grid(grid_fakes, dnnlib.make_run_dir_path('fakes_init.png'), drange=drange_net, grid_size=grid_size)
     ### drawing shifted fake images
     misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes_init_sh.png'), drange=drange_net, grid_size=grid_size)
+    draw_gen_fsg(Gs, 10, dnnlib.make_run_dir_path('fakes_init_fsg_pyramid.png'))
+    apply_fft_win(sample_gen(Gs, 1000, dtype=training_set.dtype, batch_size=32).transpose(0, 2, 3, 1), dnnlib.make_run_dir_path('fakes_init_fft.png'))
     print('>>> fakes shape: ', grid_fakes.shape)
     print(f'>>> fakes dynamic_range: min={np.amin(grid_fakes)}, max={np.amax(grid_fakes)}', )
     
@@ -389,6 +398,7 @@ def training_loop(
                 misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes%06d_sh.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
                 ### Gen fft eval
                 #gen_samples = sample_gen(Gs, fft_data_size, dtype=training_set.dtype, batch_size=32).transpose(0, 2, 3, 1)
+                draw_gen_fsg(Gs, 10, dnnlib.make_run_dir_path('fakes%06d_fsg_pyramid.png' % (cur_nimg // 1000)))
                 #cosine_eval(gen_samples, f'gen_{cur_nimg//1000:06d}', freq_centers, log_dir=dnnlib.make_run_dir_path(), true_fft=true_fft, true_fft_hann=true_fft_hann)
                 #fractal_eval(gen_samples, f'koch_snowflake_fakes{cur_nimg//1000:06d}', dnnlib.make_run_dir_path())
          

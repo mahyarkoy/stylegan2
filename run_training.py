@@ -109,7 +109,7 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         G = EasyDict(func_name='training.networks_stylegan.G_style')
         D = EasyDict(func_name='training.networks_stylegan.D_basic')
 
-    G = EasyDict(func_name='training.networks_stylegan2.G_main_small_fsg')
+    G = EasyDict(func_name='training.networks_stylegan2.G_main_small_fsg_noshare')
     D = EasyDict(func_name='training.networks_stylegan2.D_stylegan2_small')
 
     if gamma is not None:
