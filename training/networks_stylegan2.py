@@ -538,6 +538,10 @@ def G_main_small_fsg(
         images_out = components.synthesis.get_output_for(dlatents, is_training=is_training, force_clean_graph=is_template_graph, **kwargs)
 
     # Return requested outputs.
+    if 'return_fsg' in kwargs.keys() and kwargs['return_fsg'] == True:
+        fsg_list = images_out[1:]
+        images_out = tf.identity(images_out[0], name='images_out')
+        return (images_out,) + fsg_list
     images_out = tf.identity(images_out, name='images_out')
     if return_dlatents:
         return images_out, dlatents
@@ -1258,12 +1262,13 @@ def G_synthesis_stylegan2_small_fsg(
         noise_inputs.append(tf.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
 
     # Single convolution layer with all the bells and whistles.
-    def layer(x, layer_idx, fmaps, kernel, up=False):
+    def layer(x, layer_idx, fmaps, kernel, up=False, noise_layer_idx=None):
+        noise_layer_idx = layer_idx if noise_layer_idx is None else noise_layer_idx
         x = modulated_conv2d_layer(x, dlatents_in[:, layer_idx], fmaps=fmaps, kernel=kernel, up=up, resample_kernel=resample_kernel, fused_modconv=fused_modconv)
         if randomize_noise:
             noise = tf.random_normal([tf.shape(x)[0], 1, x.shape[2], x.shape[3]], dtype=x.dtype)
         else:
-            noise = tf.cast(noise_inputs[layer_idx], x.dtype)
+            noise = tf.cast(noise_inputs[noise_layer_idx], x.dtype)
         noise_strength = tf.get_variable('noise_strength', shape=[], initializer=tf.initializers.zeros())
         x += noise * tf.cast(noise_strength, x.dtype)
         return apply_bias_act(x, act=act)
@@ -1274,9 +1279,9 @@ def G_synthesis_stylegan2_small_fsg(
         res_idx = res if res_idx is None else res_idx
         t = x
         with tf.variable_scope('Conv0_up'):
-            x = layer(x, layer_idx=res_idx*2-5, fmaps=nf(nf_res-1), kernel=3, up=True)
+            x = layer(x, layer_idx=res_idx*2-5, fmaps=nf(nf_res-1), kernel=3, up=True, noise_layer_idx=res*2-5)
         with tf.variable_scope('Conv1'):
-            x = layer(x, layer_idx=res_idx*2-4, fmaps=nf(nf_res-1), kernel=3)
+            x = layer(x, layer_idx=res_idx*2-4, fmaps=nf(nf_res-1), kernel=3, noise_layer_idx=res*2-4)
         if architecture == 'resnet':
             with tf.variable_scope('Skip'):
                 t = conv2d_layer(t, fmaps=nf(nf_res-1), kernel=1, up=True, resample_kernel=resample_kernel)
@@ -1337,7 +1342,10 @@ def G_synthesis_stylegan2_small_fsg(
         images_out = y + sum(fsg_list) if len(fsg_list) > 0 else y
 
     assert images_out.dtype == tf.as_dtype(dtype)
-    return tf.identity(images_out, name='images_out')
+    images_out = tf.identity(images_out, name='images_out')
+    if 'return_fsg' in _kwargs.keys() and _kwargs['return_fsg'] == True:
+        return tuple([images_out]+fsg_list)
+    return images_out
 
 #----------------------------------------------------------------------------
 # StyleGAN2 synthesis network (Figure 7). Smaller version for 128x128 as in PGGAN.
@@ -1381,12 +1389,13 @@ def G_synthesis_stylegan2_small_fsg_noshare(
         noise_inputs.append(tf.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
 
     # Single convolution layer with all the bells and whistles.
-    def layer(x, layer_idx, fmaps, kernel, up=False):
+    def layer(x, layer_idx, fmaps, kernel, up=False, noise_layer_idx=None):
+        noise_layer_idx = layer_idx if noise_layer_idx is None else noise_layer_idx
         x = modulated_conv2d_layer(x, dlatents_in[:, layer_idx], fmaps=fmaps, kernel=kernel, up=up, resample_kernel=resample_kernel, fused_modconv=fused_modconv)
         if randomize_noise:
             noise = tf.random_normal([tf.shape(x)[0], 1, x.shape[2], x.shape[3]], dtype=x.dtype)
         else:
-            noise = tf.cast(noise_inputs[layer_idx], x.dtype)
+            noise = tf.cast(noise_inputs[noise_layer_idx], x.dtype)
         noise_strength = tf.get_variable('noise_strength', shape=[], initializer=tf.initializers.zeros())
         x += noise * tf.cast(noise_strength, x.dtype)
         return apply_bias_act(x, act=act)
@@ -1397,9 +1406,9 @@ def G_synthesis_stylegan2_small_fsg_noshare(
         res_idx = res if res_idx is None else res_idx
         t = x
         with tf.variable_scope('Conv0_up'):
-            x = layer(x, layer_idx=res_idx*2-5, fmaps=nf(nf_res-1), kernel=3, up=True)
+            x = layer(x, layer_idx=res_idx*2-5, fmaps=nf(nf_res-1), kernel=3, up=True, noise_layer_idx=res*2-5)
         with tf.variable_scope('Conv1'):
-            x = layer(x, layer_idx=res_idx*2-4, fmaps=nf(nf_res-1), kernel=3)
+            x = layer(x, layer_idx=res_idx*2-4, fmaps=nf(nf_res-1), kernel=3, noise_layer_idx=res*2-4)
         if architecture == 'resnet':
             with tf.variable_scope('Skip'):
                 t = conv2d_layer(t, fmaps=nf(nf_res-1), kernel=1, up=True, resample_kernel=resample_kernel)
@@ -1458,7 +1467,7 @@ def G_synthesis_stylegan2_small_fsg_noshare(
                     x = tf.get_variable('const', shape=[1, nf(1), 4, 4], initializer=tf.initializers.random_normal())
                     x = tf.tile(tf.cast(x, dtype), [tf.shape(dlatents_in)[0], 1, 1, 1])
                 with tf.variable_scope('Conv'):
-                    x = layer(x, layer_idx=resolution_log2, fmaps=nf(1), kernel=3)
+                    x = layer(x, layer_idx=resolution_log2, fmaps=nf(1), kernel=3, noise_layer_idx=0)
                 if architecture == 'skip':
                     y = torgb(x, y, resolution_log2)
             # Main layers.
@@ -1528,12 +1537,13 @@ def G_synthesis_stylegan2_small_fsg_noshare_jointcomplex(
         noise_inputs.append(tf.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
 
     # Single convolution layer with all the bells and whistles.
-    def layer(x, layer_idx, fmaps, kernel, up=False):
+    def layer(x, layer_idx, fmaps, kernel, up=False, noise_layer_idx=None):
+        noise_layer_idx = layer_idx if noise_layer_idx is None else noise_layer_idx
         x = modulated_conv2d_layer(x, dlatents_in[:, layer_idx], fmaps=fmaps, kernel=kernel, up=up, resample_kernel=resample_kernel, fused_modconv=fused_modconv)
         if randomize_noise:
             noise = tf.random_normal([tf.shape(x)[0], 1, x.shape[2], x.shape[3]], dtype=x.dtype)
         else:
-            noise = tf.cast(noise_inputs[layer_idx], x.dtype)
+            noise = tf.cast(noise_inputs[noise_layer_idx], x.dtype)
         noise_strength = tf.get_variable('noise_strength', shape=[], initializer=tf.initializers.zeros())
         x += noise * tf.cast(noise_strength, x.dtype)
         return apply_bias_act(x, act=act)
@@ -1544,9 +1554,9 @@ def G_synthesis_stylegan2_small_fsg_noshare_jointcomplex(
         res_idx = res if res_idx is None else res_idx
         t = x
         with tf.variable_scope('Conv0_up'):
-            x = layer(x, layer_idx=res_idx*2-5, fmaps=nf(nf_res-1), kernel=3, up=True)
+            x = layer(x, layer_idx=res_idx*2-5, fmaps=nf(nf_res-1), kernel=3, up=True, noise_layer_idx=res*2-5)
         with tf.variable_scope('Conv1'):
-            x = layer(x, layer_idx=res_idx*2-4, fmaps=nf(nf_res-1), kernel=3)
+            x = layer(x, layer_idx=res_idx*2-4, fmaps=nf(nf_res-1), kernel=3, noise_layer_idx=res*2-4)
         if architecture == 'resnet':
             with tf.variable_scope('Skip'):
                 t = conv2d_layer(t, fmaps=nf(nf_res-1), kernel=1, up=True, resample_kernel=resample_kernel)
@@ -1605,7 +1615,7 @@ def G_synthesis_stylegan2_small_fsg_noshare_jointcomplex(
                     x = tf.get_variable('const', shape=[1, nf(1), 4, 4], initializer=tf.initializers.random_normal())
                     x = tf.tile(tf.cast(x, dtype), [tf.shape(dlatents_in)[0], 1, 1, 1])
                 with tf.variable_scope('Conv'):
-                    x = layer(x, layer_idx=resolution_log2, fmaps=nf(1), kernel=3)
+                    x = layer(x, layer_idx=resolution_log2, fmaps=nf(1), kernel=3, noise_layer_idx=0)
                 if architecture == 'skip':
                     y = torgb(x, y, resolution_log2)
             # Main layers.
