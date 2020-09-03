@@ -415,13 +415,12 @@ class Network:
 
                         assert len(in_gpu) == self.num_inputs
                         out_gpu = net_gpu.get_output_for(*in_gpu, return_as_list=True, **dynamic_kwargs)
-
                         if output_transform is not None:
                             out_kwargs = dict(output_transform)
                             out_gpu = out_kwargs.pop("func")(*out_gpu, **out_kwargs)
                             out_gpu = [out_gpu] if tfutil.is_tf_expression(out_gpu) else list(out_gpu)
 
-                        assert len(out_gpu) == self.num_outputs
+                        #assert len(out_gpu) == self.num_outputs
                         out_split.append(out_gpu)
 
                 with tf.device("/cpu:0"):

@@ -636,15 +636,15 @@ def G_main_small_fsg_noshare(
         deps.append(tf.assign(components.synthesis.vars['lod'], lod_in))
     with tf.control_dependencies(deps):
         images_out = components.synthesis.get_output_for(dlatents, is_training=is_training, force_clean_graph=is_template_graph, **kwargs)
-        if 'return_fsg' in kwargs.keys() and kwargs['return_fsg'] == True:
-            images_out = images_out[0]
-            fsg_list = images_out[1:]
+            
     # Return requested outputs.
+    if 'return_fsg' in kwargs.keys() and kwargs['return_fsg'] == True:
+        fsg_list = images_out[1:]
+        images_out = tf.identity(images_out[0], name='images_out')
+        return (images_out,) + fsg_list
     images_out = tf.identity(images_out, name='images_out')
     if return_dlatents:
         return images_out, dlatents
-    if 'return_fsg' in kwargs.keys() and kwargs['return_fsg'] == True:
-        return (images_out,) + fsg_list
     return images_out
 
 #----------------------------------------------------------------------------
@@ -740,15 +740,15 @@ def G_main_small_fsg_noshare_jointcomplex(
         deps.append(tf.assign(components.synthesis.vars['lod'], lod_in))
     with tf.control_dependencies(deps):
         images_out = components.synthesis.get_output_for(dlatents, is_training=is_training, force_clean_graph=is_template_graph, **kwargs)
-        if 'return_fsg' in kwargs.keys() and kwargs['return_fsg'] == True:
-            images_out = images_out[0]
-            fsg_list = images_out[1:]
+    
     # Return requested outputs.
+    if 'return_fsg' in kwargs.keys() and kwargs['return_fsg'] == True:
+        fsg_list = images_out[1:]
+        images_out = tf.identity(images_out[0], name='images_out')
+        return (images_out,) + fsg_list
     images_out = tf.identity(images_out, name='images_out')
     if return_dlatents:
         return images_out, dlatents
-    if 'return_fsg' in kwargs.keys() and kwargs['return_fsg'] == True:
-        return (images_out,) + fsg_list
     return images_out
 
 #----------------------------------------------------------------------------
