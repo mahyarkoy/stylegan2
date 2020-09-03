@@ -1269,13 +1269,14 @@ def G_synthesis_stylegan2_small_fsg(
         return apply_bias_act(x, act=act)
 
     # Building blocks for main layers.
-    def block(x, res): # res = 3..resolution_log2
+    def block(x, res, res_idx=None): # res = 3..resolution_log2
         nf_res = res+3
+        res_idx = res if res_idx is None else res_idx
         t = x
         with tf.variable_scope('Conv0_up'):
-            x = layer(x, layer_idx=res*2-5, fmaps=nf(nf_res-1), kernel=3, up=True)
+            x = layer(x, layer_idx=res_idx*2-5, fmaps=nf(nf_res-1), kernel=3, up=True)
         with tf.variable_scope('Conv1'):
-            x = layer(x, layer_idx=res*2-4, fmaps=nf(nf_res-1), kernel=3)
+            x = layer(x, layer_idx=res_idx*2-4, fmaps=nf(nf_res-1), kernel=3)
         if architecture == 'resnet':
             with tf.variable_scope('Skip'):
                 t = conv2d_layer(t, fmaps=nf(nf_res-1), kernel=1, up=True, resample_kernel=resample_kernel)
@@ -1320,7 +1321,7 @@ def G_synthesis_stylegan2_small_fsg(
                 g_list = list()
                 for i in range(2*len(freq_list)):
                     with tf.variable_scope('FSG_{}'.format(i)):
-                        g = upsample(torgb(block(x, res), None, res))
+                        g = upsample(torgb(block(x, res, resolution_log2), None, resolution_log2))
                     g_list.append(g)
                 for i, fc in enumerate(freq_list):
                     fsg = freq_shift_gen(g_list[i*2], g_list[i*2+1], fc[0], fc[1])
