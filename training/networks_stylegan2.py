@@ -541,7 +541,7 @@ def G_main_small_fsg(
     if 'return_fsg' in kwargs.keys() and kwargs['return_fsg'] == True:
         fsg_list = images_out[1:]
         images_out = tf.identity(images_out[0], name='images_out')
-        return (images_out,) + fsg_list
+        return fsg_list + (images_out,)
     images_out = tf.identity(images_out, name='images_out')
     if return_dlatents:
         return images_out, dlatents
@@ -1444,6 +1444,7 @@ def G_synthesis_stylegan2_small_fsg(
     
     with tf.variable_scope('Add_FSG'):
         images_out = y + sum(fsg_list) if len(fsg_list) > 0 else y
+        fsg_list.append(y)
 
     assert images_out.dtype == tf.as_dtype(dtype)
     images_out = tf.identity(images_out, name='images_out')
