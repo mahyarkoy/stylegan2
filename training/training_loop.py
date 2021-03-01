@@ -214,9 +214,8 @@ def training_loop(
     #misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes_init_sh.png'), drange=drange_net, grid_size=grid_size)
     #apply_fft_win(sample_gen(Gs, 1000, dtype=training_set.dtype, batch_size=4).transpose(0, 2, 3, 1), dnnlib.make_run_dir_path('fakes_init_fft.png'))
     draw_gen_fsg(Gs, 10, dnnlib.make_run_dir_path('fakes_init_fsg_pyramid.png'))
-    print('>>> fakes shape: ', grid_fakes.shape)
-    print(f'>>> fakes dynamic_range: min={np.amin(grid_fakes)}, max={np.amax(grid_fakes)}', )
-    return
+    #print('>>> fakes shape: ', grid_fakes.shape)
+    #print(f'>>> fakes dynamic_range: min={np.amin(grid_fakes)}, max={np.amax(grid_fakes)}', )
     
     ### True fft eval
     #fft_data_size = 1000

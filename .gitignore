@@ -1,5 +1,5 @@
 /.stylegan2-cache/
 __pycache__/
 dnnlib/tflib/_cudacache/
-results_sg_koch_l5_s1024/
+results_*/
 test_nvcc
