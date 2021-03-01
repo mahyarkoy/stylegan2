@@ -19,7 +19,7 @@ from training import misc
 from metrics import metric_base
 
 sys.path.insert(1, '/dresden/users/mk1391/evl/Data')
-from ganist.util import cosine_eval, fractal_eval, pyramid_draw, apply_fft_win
+from ganist.util import cosine_eval, fractal_eval, pyramid_draw, apply_fft_win, compute_fft_win
 
 def sample_true(training_set, data_size, dtype, batch_size=32):
     im_data = np.zeros([(data_size // batch_size) * batch_size + batch_size] + training_set.shape, dtype=dtype)
@@ -33,11 +33,19 @@ def sample_gen(Gs, data_size, dtype=None, batch_size=4):
     im_data = Gs.run(latents, None, is_validation=True, minibatch_size=batch_size)
     return im_data
 
-def draw_gen_fsg(Gs, data_size, log_path, batch_size=4):
+def draw_gen_fsg(Gs, data_size, log_path, batch_size=4, with_fft=True):
     latents = np.random.randn(data_size, *Gs.input_shapes[0][1:])
     images = Gs.run(latents, None, is_validation=True, minibatch_size=batch_size, return_fsg=True)
-    images = [im.transpose(0, 2, 3, 1) for im in images]
-    pyramid_draw(images, log_path)
+    images_draw = list()
+    for im in images:
+        im = im.transpose(0, 2, 3, 1)
+        if with_fft:
+            im_fft = compute_fft_win(im, windowing=True, drop_dc=False)
+            im_fft = np.clip(np.log(im_fft), -13, 0) / 13. * 2 + 1.
+            im_fft = np.repeat(im_fft[np.newaxis, ..., np.newaxis], 3, axis=-1)
+            im = np.concatenate([im, im_fft], axis=0)
+        images_draw.append(im)
+    pyramid_draw(images_draw, log_path)
 
 #----------------------------------------------------------------------------
 # Just-in-time processing of training images before feeding them to the networks.
@@ -392,7 +400,7 @@ def training_loop(
                 grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=sched.minibatch_gpu)
                 misc.save_image_grid(grid_fakes, dnnlib.make_run_dir_path('fakes%06d.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
                 ### drawing shifted fake images
-                misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes%06d_sh.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
+                #misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes%06d_sh.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
                 ### Gen fft eval
                 #gen_samples = sample_gen(Gs, fft_data_size, dtype=training_set.dtype, batch_size=32).transpose(0, 2, 3, 1)
                 draw_gen_fsg(Gs, 10, dnnlib.make_run_dir_path('fakes%06d_fsg_pyramid.png' % (cur_nimg // 1000)))

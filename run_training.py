@@ -45,14 +45,14 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
     G_loss    = EasyDict(func_name='training.loss.G_logistic_ns_pathreg')      # Options for generator loss.
     D_loss    = EasyDict(func_name='training.loss.D_logistic_r1')              # Options for discriminator loss.
     sched     = EasyDict()                                                     # Options for TrainingSchedule.
-    grid      = EasyDict(size='8k', layout='random')                           # Options for setup_snapshot_image_grid().
+    grid      = EasyDict(size='1080p', layout='random')                           # Options for setup_snapshot_image_grid().
     sc        = dnnlib.SubmitConfig()                                          # Options for dnnlib.submit_run().
     tf_config = {'rnd.np_random_seed': 1000}                                   # Options for tflib.init_tf().
 
     train.data_dir = data_dir
     train.total_kimg = total_kimg
     train.mirror_augment = mirror_augment
-    train.image_snapshot_ticks = train.network_snapshot_ticks = 10
+    train.image_snapshot_ticks = train.network_snapshot_ticks = 50
     sched.G_lrate_base = sched.D_lrate_base = 0.002
     sched.minibatch_size_base = 32
     sched.minibatch_gpu_base = 4
@@ -109,7 +109,7 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         G = EasyDict(func_name='training.networks_stylegan.G_style')
         D = EasyDict(func_name='training.networks_stylegan.D_basic')
 
-    G = EasyDict(func_name='training.networks_stylegan2.G_main_small_fsg')
+    G = EasyDict(func_name='training.networks_stylegan2.G_main_small_fsg_lr')
     D = EasyDict(func_name='training.networks_stylegan2.D_stylegan2_small')
 
     if gamma is not None:
