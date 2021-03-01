@@ -1515,9 +1515,9 @@ def G_synthesis_stylegan2_small_fsg_lr(
             freq_norm[0] = 1
             freq_norm = tf.convert_to_tensor(1. / freq_norm, dtype=tf.float32)
             fc_x_norm = tf.tile(tf.reshape(fc_x, [1]), [im_size]) * freq_norm
-            fc_x_norm += tf.stop_gradient(fc_x_norm * (1 - freq_norm))
+            fc_x_norm += tf.stop_gradient(fc_x * (1 - freq_norm))
             fc_y_norm = tf.tile(tf.reshape(fc_y, [1]), [im_size]) * freq_norm
-            fc_y_norm += tf.stop_gradient(fc_y_norm * (1 - freq_norm))
+            fc_y_norm += tf.stop_gradient(fc_y * (1 - freq_norm))
 
             ### build cosine and sine kernels
             kernel_loc = tf.convert_to_tensor(np.arange(im_size), dtype=tf.float32)
@@ -1546,13 +1546,14 @@ def G_synthesis_stylegan2_small_fsg_lr(
             if res == resolution_log2 - 1:
                 freq_lr = 1.
                 freq_num = 4
-                target_freqs = np.array([(1/4., 0.), (0., 1/4.), (1/4., 1/4.), (-1/4., 1/4.)])
-                #target_freqs = tf.get_variable('target_freqs', shape=[freq_num, 2], 
-                #    initializer=tf.initializers.random_normal(0, 1./8 /freq_lr)) * freq_lr
-                with tf.device(None), tf.control_dependencies(None):
-                    for i in range(freq_num):
-                        tf.summary.scalar(f'target_freq_{i}_x', target_freqs[i, 0])
-                        tf.summary.scalar(f'target_freq_{i}_y', target_freqs[i, 1])
+                #target_freqs = np.array([(1/16., 0.), (0., 1/16.), (1/16., 1/16.), (-1/16., 1/16.)])
+                with tf.variable_scope('TargetFreqs'):
+                    target_freqs = tf.get_variable('targetfreqs', shape=[freq_num, 2], 
+                        initializer=tf.initializers.random_normal(0, 1./8 /freq_lr)) * freq_lr
+                #with tf.device(None), tf.control_dependencies(None):
+                #    for i in range(freq_num):
+                #        tf.summary.scalar(f'target_freq_{i}_x', target_freqs[i, 0])
+                #        tf.summary.scalar(f'target_freq_{i}_y', target_freqs[i, 1])
                 g_list = list()
                 for i in range(2*freq_num):
                     with tf.variable_scope('FSG_{}'.format(i)):

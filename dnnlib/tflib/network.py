@@ -545,6 +545,12 @@ class Network:
                     name = title + "_toplevel/" + local_name
 
                 tf.summary.histogram(name, var)
+                
+                if "TargetFreqs" in local_name:
+                    print(f'>>> Found TargetFreqs at {title} with local_name {local_name}, adding to summary.')
+                    for i in range(var.get_shape().as_list()[0]):
+                        tf.summary.scalar(f'{title}_target_freq_{i}_x', var[i, 0])
+                        tf.summary.scalar(f'{title}_target_freq_{i}_y', var[i, 1])
 
 #----------------------------------------------------------------------------
 # Backwards-compatible emulation of legacy output transformation in Network.run().
