@@ -318,6 +318,7 @@ def training_loop(
         summary_log.add_graph(tf.get_default_graph())
     if save_weight_histograms:
         G.setup_weight_histograms(); D.setup_weight_histograms()
+    G.setup_scalar_summaries()
     #metrics = metric_base.MetricGroup(metric_arg_list)
 
     print('Training for %d kimg...\n' % total_kimg)
