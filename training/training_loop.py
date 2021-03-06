@@ -33,11 +33,12 @@ def sample_gen(Gs, data_size, dtype=None, batch_size=4):
     im_data = Gs.run(latents, None, is_validation=True, minibatch_size=batch_size)
     return im_data
 
-def draw_gen_fsg(Gs, data_size, log_path, batch_size=4, with_fft=True):
+def draw_gen_fsg(Gs, data_size, log_path, batch_size=4, with_fft=True, kernel=None):
     latents = np.random.randn(data_size, *Gs.input_shapes[0][1:])
     images = Gs.run(latents, None, is_validation=True, minibatch_size=batch_size, return_fsg=True)
     images_draw = list()
     for im in images:
+        im = im if kernel is None else im * kernel
         im = im.transpose(0, 2, 3, 1)
         if with_fft:
             im_fft = compute_fft_win(im, windowing=True, drop_dc=False)
@@ -211,9 +212,10 @@ def training_loop(
     grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=sched.minibatch_gpu)
     misc.save_image_grid(grid_fakes, dnnlib.make_run_dir_path('fakes_init.png'), drange=drange_net, grid_size=grid_size)
     ### drawing shifted fake images
-    #misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes_init_sh.png'), drange=drange_net, grid_size=grid_size)
+    misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes_init_sh.png'), drange=drange_net, grid_size=grid_size)
     #apply_fft_win(sample_gen(Gs, 1000, dtype=training_set.dtype, batch_size=4).transpose(0, 2, 3, 1), dnnlib.make_run_dir_path('fakes_init_fft.png'))
     draw_gen_fsg(Gs, 10, dnnlib.make_run_dir_path('fakes_init_fsg_pyramid.png'))
+    draw_gen_fsg(Gs, 10, dnnlib.make_run_dir_path('fakes_init_fsg_pyramid_sh.png'), kernel=kernel_cos)
     #print('>>> fakes shape: ', grid_fakes.shape)
     #print(f'>>> fakes dynamic_range: min={np.amin(grid_fakes)}, max={np.amax(grid_fakes)}', )
     
@@ -399,10 +401,11 @@ def training_loop(
                 grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=sched.minibatch_gpu)
                 misc.save_image_grid(grid_fakes, dnnlib.make_run_dir_path('fakes%06d.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
                 ### drawing shifted fake images
-                #misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes%06d_sh.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
+                misc.save_image_grid(grid_fakes*kernel_cos, dnnlib.make_run_dir_path('fakes%06d_sh.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
                 ### Gen fft eval
                 #gen_samples = sample_gen(Gs, fft_data_size, dtype=training_set.dtype, batch_size=32).transpose(0, 2, 3, 1)
                 draw_gen_fsg(Gs, 10, dnnlib.make_run_dir_path('fakes%06d_fsg_pyramid.png' % (cur_nimg // 1000)))
+                draw_gen_fsg(Gs, 10, dnnlib.make_run_dir_path('fakes%06d_fsg_pyramid_sh.png' % (cur_nimg // 1000)), kernel=kernel_cos)
                 #cosine_eval(gen_samples, f'gen_{cur_nimg//1000:06d}', freq_centers, log_dir=dnnlib.make_run_dir_path(), true_fft=true_fft, true_fft_hann=true_fft_hann)
                 #fractal_eval(gen_samples, f'koch_snowflake_fakes{cur_nimg//1000:06d}', dnnlib.make_run_dir_path())
          

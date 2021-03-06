@@ -1511,7 +1511,7 @@ def G_synthesis_stylegan2_small_fsg_lr(
             im_size = gr.get_shape().as_list()[-1]
 
             ### build normalized freqs such that gradient updates from different locations have the same scale
-            freq_norm = np.arange(im_size, dtype=np.float32)
+            freq_norm = np.ones(im_size, dtype=np.float32)
             freq_norm[0] = 1
             freq_norm = tf.convert_to_tensor(1. / freq_norm, dtype=tf.float32)
             fc_x_norm = tf.tile(tf.reshape(fc_x, [1]), [im_size]) * freq_norm
